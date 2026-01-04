@@ -23,12 +23,14 @@ if not os.path.exists("uploads"):
     os.makedirs("uploads")
 
 # 2. Sidebar for System Status
+# 2. Sidebar for System Status
 with st.sidebar:
     st.header("System Status")
-    if os.path.exists("key.json"):
-        st.success("Google Cloud Key: FOUND")
+    # Check for Secret (Cloud) OR File (Local)
+    if "gcp_service_account" in st.secrets or os.path.exists("key.json"):
+        st.success("Google Cloud AI: CONNECTED")
     else:
-        st.error("Google Cloud Key: MISSING")
+        st.error("Google Cloud AI: DISCONNECTED")
     st.markdown("---")
     st.write("**Core Technology:**")
     st.write("- Multimodal Vectors")

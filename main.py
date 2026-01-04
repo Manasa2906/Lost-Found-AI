@@ -1,21 +1,46 @@
 import os
 import vertexai
 import numpy as np
+import streamlit as st
+import json
 from vertexai.vision_models import MultiModalEmbeddingModel, Image
 from vertexai.generative_models import GenerativeModel, Part
 from sklearn.metrics.pairwise import cosine_similarity
+from google.oauth2 import service_account
 
-# 1. Setup Credentials
-current_dir = os.path.dirname(os.path.abspath(__file__))
-key_path = os.path.join(current_dir, "key.json")
-if os.path.exists(key_path):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
+# --- 1. Setup Credentials & Initialize ---
+PROJECT_ID = "lost-found-483214-j7"
+LOCATION = "us-central1"
 
-# 2. Initialize Vertex AI
-PROJECT_ID = "lost-found-483214-j7" 
-vertexai.init(project=PROJECT_ID, location="us-central1")
+def initialize_vertex():
+    """Handles authentication for both Local and Streamlit Cloud"""
+    try:
+        if "gcp_service_account" in st.secrets:
+            # OPTION A: Streamlit Cloud (Reading from Secrets)
+            secret_info = st.secrets["gcp_service_account"]
+            # Convert the secret to a dictionary
+            creds_dict = json.loads(json.dumps(secret_info)) if hasattr(secret_info, "to_dict") else dict(secret_info)
+            credentials = service_account.Credentials.from_service_account_info(creds_dict)
+            vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
+        else:
+            # OPTION B: Local Development (Reading from key.json)
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            key_path = os.path.join(current_dir, "key.json")
+            if os.path.exists(key_path):
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
+                vertexai.init(project=PROJECT_ID, location=LOCATION)
+            else:
+                st.error("No Google Cloud credentials found. Please check key.json or Streamlit Secrets.")
+    except Exception as e:
+        st.error(f"Initialization Error: {e}")
+
+# Run the initialization immediately
+initialize_vertex()
+
+# --- 2. Core Functions ---
 
 def get_image_embedding(image_path):
+    # Using 'multimodalembedding@001' is often more stable for specific versions
     model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding")
     image = Image.load_from_file(image_path)
     embeddings = model.get_embeddings(image=image)
@@ -26,26 +51,30 @@ def calculate_similarity(img_path1, img_path2):
         vec1 = np.array(get_image_embedding(img_path1)).reshape(1, -1)
         vec2 = np.array(get_image_embedding(img_path2)).reshape(1, -1)
         score = cosine_similarity(vec1, vec2)[0][0]
-        return round(score * 100, 2)
+        # Ensure the score stays within 0-100%
+        return round(max(0, min(100, score * 100)), 2)
     except Exception as e:
         return f"Embedding Error: {str(e)}"
 
 def get_ai_explanation(img_path1, img_path2):
-    """UPDATED: Using Gemini 2.5 Flash for 2026 stability"""
     try:
-        # Using the updated 2026 stable model name
+        # Note: Gemini 2.5 Flash is the model requested for 2026 stability
         model = GenerativeModel("gemini-2.5-flash")
         
-        img1_data = open(img_path1, "rb").read()
-        img2_data = open(img_path2, "rb").read()
+        with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
+            img1_data = f1.read()
+            img2_data = f2.read()
         
         image1 = Part.from_data(data=img1_data, mime_type="image/jpeg")
         image2 = Part.from_data(data=img2_data, mime_type="image/jpeg")
         
-        prompt = "Look at these two items. Explain in 2 bullet points why they are the same object. Mention specific details like shape, color, or markings."
+        prompt = (
+            "You are a forensic lost-and-found assistant. Look at these two items. "
+            "Provide exactly 2 bullet points explaining why they are likely the same object. "
+            "Focus on unique identifiers like scratches, specific colors, or branding."
+        )
         
         response = model.generate_content([prompt, image1, image2])
         return response.text
     except Exception as e:
-        # This will now show you the EXACT error in Streamlit
         return f"AI Logic Error: {str(e)}"

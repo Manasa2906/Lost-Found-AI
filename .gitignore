@@ -1,13 +1,9 @@
-# Sensitive Google Cloud Key (CRITICAL)
+# Ignore Google Cloud Keys
 key.json
+*.json
 
-# Python virtual environment
-venv/
-.venv/
-
-# Python cache files
-__pycache__/
-*.py[cod]
-
-# Uploaded test images
+# Ignore Streamlit local settings and temporary uploads
+.streamlit/
 uploads/
+__pycache__/
+.env
