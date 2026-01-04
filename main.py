@@ -16,24 +16,25 @@ def initialize_vertex():
     """Handles authentication for both Local and Streamlit Cloud"""
     try:
         if "gcp_service_account" in st.secrets:
-            # OPTION A: Streamlit Cloud (Reading from Secrets)
+            # OPTION A: Streamlit Cloud
             secret_info = st.secrets["gcp_service_account"]
-            # Convert the secret to a dictionary
-            creds_dict = json.loads(json.dumps(secret_info)) if hasattr(secret_info, "to_dict") else dict(secret_info)
+            
+            # --- FIX STARTS HERE ---
+            # Convert AttrDict to a standard Python Dictionary
+            creds_dict = {key: value for key, value in secret_info.items()}
+            # --- FIX ENDS HERE ---
+            
             credentials = service_account.Credentials.from_service_account_info(creds_dict)
             vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=credentials)
         else:
-            # OPTION B: Local Development (Reading from key.json)
+            # OPTION B: Local Development
             current_dir = os.path.dirname(os.path.abspath(__file__))
             key_path = os.path.join(current_dir, "key.json")
             if os.path.exists(key_path):
                 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
                 vertexai.init(project=PROJECT_ID, location=LOCATION)
-            else:
-                st.error("No Google Cloud credentials found. Please check key.json or Streamlit Secrets.")
     except Exception as e:
         st.error(f"Initialization Error: {e}")
-
 # Run the initialization immediately
 initialize_vertex()
 
