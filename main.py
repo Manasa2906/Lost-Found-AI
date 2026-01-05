@@ -74,19 +74,43 @@ def calculate_similarity(img_path1, img_path2):
     except Exception as e:
         return f"Embedding Error: {str(e)}"
 
-def get_ai_explanation(img_path1, img_path2):
+def get_ai_summary(img_path):
+    """Generates a brief summary/description of the lost or found item."""
     try:
         initialize_vertex()
-        # In 2026, 'gemini-2.0-flash-exp' or 'gemini-1.5-flash' (auto-updated) 
-        # are the most stable for us-central1.
-        model = GenerativeModel("gemini-1.5-flash") 
+        # Using the latest stable model version
+        model = GenerativeModel("gemini-1.5-flash-002") 
+        
+        with open(img_path, "rb") as f:
+            image_part = Part.from_data(data=f.read(), mime_type="image/jpeg")
+        
+        prompt = "Provide a 1-sentence concise description of the main object in this image for a lost and found database."
+        response = model.generate_content([prompt, image_part])
+        return response.text
+    except Exception as e:
+        return f"Summary Error: {str(e)}"
+
+def get_ai_explanation(img_path1, img_path2):
+    """Updated with error handling and model versioning for us-central1."""
+    try:
+        initialize_vertex()
+        # Explicitly using the full model name often resolves 404 errors
+        model = GenerativeModel("gemini-1.5-flash-002") 
         
         with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
             image1 = Part.from_data(data=f1.read(), mime_type="image/jpeg")
             image2 = Part.from_data(data=f2.read(), mime_type="image/jpeg")
         
-        prompt = "Compare these two items and give 2 bullet points on why they match."
+        prompt = "Compare these two items. Provide 2 bullet points on why they match or differ."
         response = model.generate_content([prompt, image1, image2])
         return response.text
     except Exception as e:
+        # Fallback to an older stable version if 1.5-flash is restricted
+        if "404" in str(e):
+            try:
+                model = GenerativeModel("gemini-1.0-pro-vision-001")
+                # ... repeat generation logic ...
+                return "Model fallback successful: " + model.generate_content([prompt, image1, image2]).text
+            except:
+                return "AI Logic Error: Please enable Vertex AI API in Google Cloud Console."
         return f"AI Logic Error: {str(e)}"
