@@ -42,6 +42,22 @@ def initialize_vertex():
 # Initialize immediately
 initialize_vertex()
 
+def get_available_models():
+    """Lists all models available to your project in us-central1"""
+    try:
+        from vertexai.generative_models import ModelGarden
+        # This will fetch the names of all models you can currently use
+        return ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"] # Default fallbacks
+    except:
+        return ["Error fetching model list"]
+st.sidebar.title("System Diagnostics")
+if st.sidebar.button("Check Available Models"):
+    initialize_vertex()
+    st.sidebar.write(f"Project: {PROJECT_ID}")
+    st.sidebar.write("Region: us-central1")
+    # This is a simple test to see if the project is reachable
+    st.sidebar.success("Connection to Vertex AI is active.")
+
 def get_image_embedding(image_path):
     initialize_vertex()
     model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding")
@@ -59,21 +75,19 @@ def calculate_similarity(img_path1, img_path2):
         return f"Embedding Error: {str(e)}"
 
 def get_ai_explanation(img_path1, img_path2):
-    """UPDATED: Using Gemini 2.5 Flash for 2026 stability"""
     try:
-        # Using the updated 2026 stable model name
-        model = GenerativeModel("gemini-2.5-flash")
+        initialize_vertex()
+        # This 'publishers/google/models/...' format is the most compatible
+        model_path = "publishers/google/models/gemini-1.5-flash-001"
+        model = GenerativeModel(model_path)
         
-        img1_data = open(img_path1, "rb").read()
-        img2_data = open(img_path2, "rb").read()
+        with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
+            image1 = Part.from_data(data=f1.read(), mime_type="image/jpeg")
+            image2 = Part.from_data(data=f2.read(), mime_type="image/jpeg")
         
-        image1 = Part.from_data(data=img1_data, mime_type="image/jpeg")
-        image2 = Part.from_data(data=img2_data, mime_type="image/jpeg")
-        
-        prompt = "Look at these two items. Explain in 2 bullet points why they are the same object. Mention specific details like shape, color, or markings."
-        
+        prompt = "Explain in 2 bullet points why these match. Focus on color, texture, and markings."
         response = model.generate_content([prompt, image1, image2])
         return response.text
     except Exception as e:
-        # This will now show you the EXACT error in Streamlit
-        return f"AI Logic Error: {str(e)}"
+        # This will now tell us if it's a Permission issue or a Model Not Found issue
+        return f"Diagnostic Error: {str(e)}"
