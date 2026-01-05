@@ -59,25 +59,18 @@ def calculate_similarity(img_path1, img_path2):
         return f"Embedding Error: {str(e)}"
 
 def get_ai_explanation(img_path1, img_path2):
-    """Uses the latest stable Gemini 2.5 Flash model for match logic."""
     try:
         initialize_vertex()
-        # USE THE 2026 STABLE ALIAS
-        model = GenerativeModel("gemini-2.5-flash") 
+        # Using the fully qualified version for the us-central1 region
+        # This is the most reliable way to fix 404 errors in 2026
+        model = GenerativeModel("projects/lost-found-483214-j7/locations/us-central1/publishers/google/models/gemini-1.5-flash-002")
         
         with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
             image1 = Part.from_data(data=f1.read(), mime_type="image/jpeg")
             image2 = Part.from_data(data=f2.read(), mime_type="image/jpeg")
         
-        prompt = (
-            "Analyze these two images for a Lost and Found system. "
-            "Explain in exactly 2 bullet points why these items are likely a match. "
-            "Focus on visual details like color, shape, and unique markings."
-        )
-        
+        prompt = "Explain in 2 bullet points why these match. Focus on color, texture, and markings."
         response = model.generate_content([prompt, image1, image2])
         return response.text
     except Exception as e:
-        # If gemini-2.5-flash also 404s, your project might need 
-        # a manual "Enable" in the Vertex AI Model Garden.
         return f"AI Logic Error: {str(e)}"
