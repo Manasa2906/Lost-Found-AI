@@ -47,7 +47,12 @@ def get_available_models():
     try:
         from vertexai.generative_models import ModelGarden
         # This will fetch the names of all models you can currently use
-        return ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"] # Default fallbacks
+        return [
+  "gemini-1.5-flash-002",
+  "gemini-1.5-pro-002",
+  "gemini-1.0-pro"
+]
+
     except:
         return ["Error fetching model list"]
 st.sidebar.title("System Diagnostics")
@@ -75,36 +80,40 @@ def calculate_similarity(img_path1, img_path2):
         return f"Embedding Error: {str(e)}"
 
 def get_ai_summary(img_path):
-    """Slide 4: Automated Content Tagging - Generates a brief summary of the item."""
     try:
         initialize_vertex()
-        # Updated to the latest 2026 stable model
-        model = GenerativeModel("gemini-2.5-flash") 
-        
+        model = GenerativeModel("gemini-1.5-flash-002")
+
         with open(img_path, "rb") as f:
-            image_data = f.read()
-            image_part = Part.from_data(data=image_data, mime_type="image/jpeg")
-        
+            image_part = Part.from_data(
+                data=f.read(),
+                mime_type="image/jpeg"
+            )
+
         prompt = "Describe this object for a lost and found database in exactly 10 words."
         response = model.generate_content([prompt, image_part])
         return response.text
+
     except Exception as e:
         return f"Summary Error: {str(e)}"
 
+
 def get_ai_explanation(img_path1, img_path2):
-    """Slide 5: Intelligent Verification - Compares two items with reasoning."""
     try:
         initialize_vertex()
-        # gemini-2.5-flash is the best for price-performance and reasoning
-        model = GenerativeModel("gemini-2.5-flash") 
-        
+        model = GenerativeModel("gemini-1.5-pro-002")
+
         with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
-            image1 = Part.from_data(data=f1.read(), mime_type="image/jpeg")
-            image2 = Part.from_data(data=f2.read(), mime_type="image/jpeg")
-        
-        prompt = "Compare these items. Provide 2 bullet points on why they are likely the same or different."
+            image1 = Part.from_data(f1.read(), "image/jpeg")
+            image2 = Part.from_data(f2.read(), "image/jpeg")
+
+        prompt = (
+            "Compare these two items.\n"
+            "Give exactly 2 bullet points explaining whether they are the same object or different."
+        )
+
         response = model.generate_content([prompt, image1, image2])
         return response.text
+
     except Exception as e:
-        # Final fallback if even 2.5-flash is having connectivity issues
-        return f"AI Logic Error: {str(e)}. Tip: Check if 'Vertex AI API' is enabled in Cloud Console."
+        return f"AI Logic Error: {str(e)}"
