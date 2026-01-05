@@ -75,19 +75,30 @@ def calculate_similarity(img_path1, img_path2):
         return f"Embedding Error: {str(e)}"
 
 def get_ai_explanation(img_path1, img_path2):
+    """Uses the stable Gemini 1.5 Flash model to explain the match."""
     try:
         initialize_vertex()
-        # This 'publishers/google/models/...' format is the most compatible
-        model_path = "publishers/google/models/gemini-1.5-flash-001"
-        model = GenerativeModel(model_path)
+        
+        # FIX: Using the fully qualified stable model version
+        model = GenerativeModel("gemini-1.5-flash-002") 
         
         with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
             image1 = Part.from_data(data=f1.read(), mime_type="image/jpeg")
             image2 = Part.from_data(data=f2.read(), mime_type="image/jpeg")
         
-        prompt = "Explain in 2 bullet points why these match. Focus on color, texture, and markings."
+        prompt = (
+            "You are a Lost and Found assistant. Compare these two items. "
+            "List 2 specific bullet points explaining why they are likely the same object. "
+            "Focus on color, shape, and unique textures."
+        )
+        
         response = model.generate_content([prompt, image1, image2])
         return response.text
     except Exception as e:
-        # This will now tell us if it's a Permission issue or a Model Not Found issue
-        return f"Diagnostic Error: {str(e)}"
+        # If gemini-1.5-flash-002 still fails, fallback to standard gemini-1.5-pro
+        try:
+            model = GenerativeModel("gemini-1.5-pro")
+            response = model.generate_content([prompt, image1, image2])
+            return response.text
+        except:
+            return f"AI Logic Error: {str(e)}"
