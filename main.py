@@ -59,11 +59,11 @@ def calculate_similarity(img_path1, img_path2):
         return f"Embedding Error: {str(e)}"
 
 def get_ai_explanation(img_path1, img_path2):
-    """Uses Gemini 1.5 Flash to provide a logical explanation for the match."""
+    """Uses the latest stable Gemini 2.5 Flash model for match logic."""
     try:
         initialize_vertex()
-        # FIX: Using the absolute most stable 2026 model identifier
-        model = GenerativeModel("gemini-1.5-flash-002") 
+        # USE THE 2026 STABLE ALIAS
+        model = GenerativeModel("gemini-2.5-flash") 
         
         with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
             image1 = Part.from_data(data=f1.read(), mime_type="image/jpeg")
@@ -78,5 +78,6 @@ def get_ai_explanation(img_path1, img_path2):
         response = model.generate_content([prompt, image1, image2])
         return response.text
     except Exception as e:
-        # This will help us see if there is a region permission issue
+        # If gemini-2.5-flash also 404s, your project might need 
+        # a manual "Enable" in the Vertex AI Model Garden.
         return f"AI Logic Error: {str(e)}"
