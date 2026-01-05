@@ -59,18 +59,21 @@ def calculate_similarity(img_path1, img_path2):
         return f"Embedding Error: {str(e)}"
 
 def get_ai_explanation(img_path1, img_path2):
+    """UPDATED: Using Gemini 2.5 Flash for 2026 stability"""
     try:
-        initialize_vertex()
-        # Using the fully qualified version for the us-central1 region
-        # This is the most reliable way to fix 404 errors in 2026
-        model = GenerativeModel("projects/lost-found-483214-j7/locations/us-central1/publishers/google/models/gemini-1.5-flash-002")
+        # Using the updated 2026 stable model name
+        model = GenerativeModel("gemini-2.5-flash")
         
-        with open(img_path1, "rb") as f1, open(img_path2, "rb") as f2:
-            image1 = Part.from_data(data=f1.read(), mime_type="image/jpeg")
-            image2 = Part.from_data(data=f2.read(), mime_type="image/jpeg")
+        img1_data = open(img_path1, "rb").read()
+        img2_data = open(img_path2, "rb").read()
         
-        prompt = "Explain in 2 bullet points why these match. Focus on color, texture, and markings."
+        image1 = Part.from_data(data=img1_data, mime_type="image/jpeg")
+        image2 = Part.from_data(data=img2_data, mime_type="image/jpeg")
+        
+        prompt = "Look at these two items. Explain in 2 bullet points why they are the same object. Mention specific details like shape, color, or markings."
+        
         response = model.generate_content([prompt, image1, image2])
         return response.text
     except Exception as e:
+        # This will now show you the EXACT error in Streamlit
         return f"AI Logic Error: {str(e)}"
